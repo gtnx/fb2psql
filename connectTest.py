@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 #!/usr/bin/python
 #
 # psycopg2 - для соединения с postgresql
@@ -8,6 +10,8 @@
 import psycopg2
 import kinterbasdb
 import ConfigParser
+import FieldProperty
+import TableProperty
 
 config = ConfigParser.ConfigParser()
 config.read('config.cfg')
@@ -30,43 +34,105 @@ def openFB(config):
                 dialect=config.getint('fb', 'dialect'))
   return conFB, conFB.cursor()
 
-
+def createTable(table,  relationName,  curFB,  curPSQL):
+     # получить все индексы для таблици relationName
+     table.name = relationName
+     sql = """
+             select 
+                        i_s.RDB$INDEX_NAME as "index name", 
+                        i_s.RDB$FIELD_NAME as "field name",
+                       rc.RDB$CONSTRAINT_TYPE as "type"
+             from 
+                     rdb$index_segments i_s 
+                     join rdb$indices i 
+                     on i.RDB$INDEX_NAME = i_s.RDB$INDEX_NAME
+                     left join rdb$relation_constraints rc
+                     on rc.RDB$INDEX_NAME = i.RDB$INDEX_NAME
+             where 
+                 i.RDB$RELATION_NAME = '%(tableName)s'
+             order by 
+                 i_s.RDB$INDEX_NAME, 
+                 RDB$FIELD_POSITION
+     """ % {"tableName":relationName}
+     curFB.execute(sql)
+     indexis = curFB.fetchall()
+     newIndexis = {}
+     newUniqueIndexis = {}
+     for index in indexis:
+         key = unicode(index[0]).strip()
+         value = unicode(index[1]).strip()
+         if unicode(index[2]).strip()== u"UNIQUE":
+             if key in newUniqueIndexis.keys():
+                 newUniqueIndexis[key].append(value)
+             else :
+                 newUniqueIndexis[key] = [value]
+         elif  unicode(index[2]).strip()== u"PRIMARY KEY":
+             table.primaryKey.append(value)
+         else :
+             if key in newIndexis.keys():
+                 newIndexis[key].append(value)
+             else :
+                 newIndexis[key] = [value]
+     print table
+     curPSQL.execute(unicode(table))
+     for  indexName in newIndexis:
+         listField = newIndexis[indexName]
+         sqlCreateIndex = u"CREATE INDEX " + indexName + u" ON " + relationName + u"(" + ",".join(listField)  + u")"
+         print sqlCreateIndex
+         curPSQL.execute(unicode(sqlCreateIndex))
+     for  indexName in newUniqueIndexis:
+         listField = newUniqueIndexis[indexName]
+         sqlCreateIndex = u"CREATE UNIQUE INDEX " + indexName + u" ON " + relationName + u"(" + ",".join(listField)  + u")"
+         print sqlCreateIndex
+         curPSQL.execute(unicode(sqlCreateIndex))
+                  
 conFB, curFB = openFB(config)
 conPSQL, curPSQL = openPSQL(config)
 
 try:
-  curFB.execute("""
-  select R.RDB$RELATION_NAME, R.RDB$FIELD_POSITION, R.RDB$FIELD_NAME, 
-  F.RDB$FIELD_LENGTH, F.RDB$FIELD_TYPE, F.RDB$FIELD_SCALE, F.RDB$FIELD_SUB_TYPE 
-  from RDB$FIELDS F, RDB$RELATION_FIELDS R 
-  where F.RDB$FIELD_NAME = R.RDB$FIELD_SOURCE and R.RDB$SYSTEM_FLAG = 0 
-  order by R.RDB$RELATION_NAME, R.RDB$FIELD_POSITION
-  """)
-  rows = curFB.fetchall()
-  curPSQL.execute(""" drop table if exists fieldsInFB""")
-  curPSQL.execute("""
-          create table fieldsInFB(
-                 name varchar(250), 
-                 field_position int, 
-				 field_name varchar(250), 
-				 field_lingth int, 
-				 field_type int, 
-				 field_scale int, 
-				 field_sub_type int
-		  )""")
-  for row in rows:     
-     map = {}
-     num = 1
-     for value in row:
-        if num == 1 or num == 3:
-           map['k' + str(num)] = str(value).strip()
-        else:
-           map['k' + str(num)] = value
-        num += 1
-     insert= "INSERT INTO fieldsInFB VALUES ('%(k1)s', %(k2)d, '%(k3)s', %(k4)d, %(k5)d, %(k6)d, %(k7)d )" % map
-     
-     curPSQL.execute(insert)
-  conPSQL.commit()
+     curFB.execute("""
+     select 
+            R.RDB$RELATION_NAME AS "TABLENAME", 
+            F.RDB$FIELD_TYPE AS "TYPE", 
+            F.RDB$CHARACTER_LENGTH AS "LENGTH",
+            F.RDB$FIELD_SCALE AS "SCALE", 
+            F.RDB$FIELD_SUB_TYPE AS "SUB_TYPE",
+            F.RDB$FIELD_PRECISION AS "PRECISION", 
+            R.RDB$FIELD_NAME AS "NAME",
+            R.RDB$DEFAULT_SOURCE AS "DEFAULT_VALUE",
+            R.RDB$NULL_FLAG                    
+     from 
+              RDB$FIELDS F, 
+              RDB$RELATION_FIELDS R 
+     where 
+                 F.RDB$FIELD_NAME = R.RDB$FIELD_SOURCE 
+                 and R.RDB$SYSTEM_FLAG = 0 
+                 and R.RDB$RELATION_NAME like 'NEW_TEST_TABLE%'         
+     order by 
+                 R.RDB$RELATION_NAME, 
+                 R.RDB$FIELD_POSITION
+     """)
+     rows = curFB.fetchall()
+     relationName = None 
+     table = TableProperty.TableProperty()
+     for row in rows:              
+         if relationName is not None  and relationName != row[0]:
+             createTable(table,  relationName,  curFB,  curPSQL)
+             table = TableProperty.TableProperty()
+             
+         relationName = row[0]
+         fp = FieldProperty.FieldProperty()
+         fp.type = row[1]
+         fp.length = row[2]
+         fp.scale = row[3]
+         fp.subType = row[4]
+         fp.precision = row[5]
+         fp.name = row[6].strip()
+         fp.defaultValue = row[7]
+         fp.nullFlag = row[8]
+         table.fields.append(unicode(fp))
+     createTable(table,  relationName,  curFB,  curPSQL)    
+     conPSQL.commit()
 finally:
   curFB.close()
   curPSQL.close()
