@@ -1,6 +1,6 @@
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-#!/usr/bin/python
 #
 # psycopg2 - для соединения с postgresql
 # kinterbasdb - для соединения с firebird
@@ -35,8 +35,8 @@ def openFB(config):
   return conFB, conFB.cursor()
 
 def createTable(table,  relationName,  curFB,  curPSQL):
-     # получить все индексы для таблици relationName
      table.name = relationName
+     # получить все индексы для таблици relationName
      sql = """
              select 
                         i_s.RDB$INDEX_NAME as "index name", 
@@ -48,6 +48,7 @@ def createTable(table,  relationName,  curFB,  curPSQL):
                      on i.RDB$INDEX_NAME = i_s.RDB$INDEX_NAME
                      left join rdb$relation_constraints rc
                      on rc.RDB$INDEX_NAME = i.RDB$INDEX_NAME
+					 and rc.RDB$RELATION_NAME = i.RDB$RELATION_NAME
              where 
                  i.RDB$RELATION_NAME = '%(tableName)s'
              order by 
@@ -56,7 +57,11 @@ def createTable(table,  relationName,  curFB,  curPSQL):
      """ % {"tableName":relationName}
      curFB.execute(sql)
      indexis = curFB.fetchall()
+     # мап обычных индексов.
+     # ключ - имя индекса, значение - массив полей
      newIndexis = {}
+     # мап уникальных индексов.
+     # ключ - имя индекса, значение - массив полей
      newUniqueIndexis = {}
      for index in indexis:
          key = unicode(index[0]).strip()
@@ -67,25 +72,33 @@ def createTable(table,  relationName,  curFB,  curPSQL):
              else :
                  newUniqueIndexis[key] = [value]
          elif  unicode(index[2]).strip()== u"PRIMARY KEY":
+             # PRIMARY KEY - создается в месте с таблицей
              table.primaryKey.append(value)
          else :
              if key in newIndexis.keys():
                  newIndexis[key].append(value)
              else :
                  newIndexis[key] = [value]
-     print table
-     curPSQL.execute(unicode(table))
-     for  indexName in newIndexis:
-         listField = newIndexis[indexName]
-         sqlCreateIndex = u"CREATE INDEX " + indexName + u" ON " + relationName + u"(" + ",".join(listField)  + u")"
-         print sqlCreateIndex
-         curPSQL.execute(unicode(sqlCreateIndex))
-     for  indexName in newUniqueIndexis:
-         listField = newUniqueIndexis[indexName]
-         sqlCreateIndex = u"CREATE UNIQUE INDEX " + indexName + u" ON " + relationName + u"(" + ",".join(listField)  + u")"
-         print sqlCreateIndex
-         curPSQL.execute(unicode(sqlCreateIndex))
-                  
+     #try :
+     if True:
+         # создаем таблицу
+         print table
+         curPSQL.execute(unicode(table))
+         # добавляем индексы
+         for  indexName in newIndexis:
+             listField = newIndexis[indexName]
+             sqlCreateIndex = u"CREATE INDEX " + indexName + u" ON " + relationName + u"(" + ",".join(listField)  + u")"
+             print sqlCreateIndex
+             curPSQL.execute(unicode(sqlCreateIndex))
+         # добавляем уникальные индексы
+         for  indexName in newUniqueIndexis:
+             listField = newUniqueIndexis[indexName]
+             sqlCreateIndex = u"CREATE UNIQUE INDEX " + indexName + u" ON " + relationName + u"(" + ",".join(listField)  + u")"
+             print sqlCreateIndex
+             curPSQL.execute(unicode(sqlCreateIndex))
+     #except  psycopg2.ProgrammingError:
+     #    print  u"tableName= " + relationName + u" существует" 
+         
 conFB, curFB = openFB(config)
 conPSQL, curPSQL = openPSQL(config)
 
@@ -107,7 +120,6 @@ try:
      where 
                  F.RDB$FIELD_NAME = R.RDB$FIELD_SOURCE 
                  and R.RDB$SYSTEM_FLAG = 0 
-                 and R.RDB$RELATION_NAME like 'NEW_TEST_TABLE%'         
      order by 
                  R.RDB$RELATION_NAME, 
                  R.RDB$FIELD_POSITION
@@ -118,7 +130,11 @@ try:
      for row in rows:              
          if relationName is not None  and relationName != row[0]:
              createTable(table,  relationName,  curFB,  curPSQL)
+             conPSQL.commit()
+
              table = TableProperty.TableProperty()
+             del table.fields[:]
+             del table.primaryKey[:]
              
          relationName = row[0]
          fp = FieldProperty.FieldProperty()
