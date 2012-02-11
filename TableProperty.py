@@ -2,6 +2,7 @@
 
 class TableProperty:
    fields = []
+   fieldsProp = []
    # имена полей в primaryKey
    primaryKey = []
    name = u""
