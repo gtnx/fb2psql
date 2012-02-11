@@ -1,0 +1,5 @@
+settings connect:
+config.cfg
+
+for run:
+python main.py
