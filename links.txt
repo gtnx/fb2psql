@@ -1,0 +1,2 @@
+Для работы с psql
+http://packages.python.org/psycopg2/usage.html
