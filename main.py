@@ -11,9 +11,9 @@ import FieldProperty
 import TableProperty
 import MoveData
 import MoveGenerators
+import MoveTriggers
 
 from Connect import *
-
 
 
 conFB, curFB = openFB()
@@ -76,6 +76,7 @@ try:
      createTable(table,  relationName,  curFB,  curPSQL)    
      conPSQL.commit()
      MoveData.MoveData(table).run()
+     MoveTriggers.MoveTriggers().run()
 finally:
   curFB.close()
   curPSQL.close()
