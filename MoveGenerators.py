@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from Util import *
+from Connect import *
 
 class MoveGenerators:
     

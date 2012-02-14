@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from Util import *
+from Connect import *
 import exceptions
 
 class MoveData:

@@ -12,7 +12,7 @@ import TableProperty
 import MoveData
 import MoveGenerators
 
-from Util import *
+from Connect import *
 
 
 
