@@ -1,5 +1,13 @@
 # -*- coding: utf-8 -*-
 
+#
+# psycopg2 - для соединения с postgresql
+# kinterbasdb - для соединения с firebird
+# apt-get install python-kinterbasdb
+# apt-get install python-psycopg2
+#
+
+
 import ConfigParser
 import psycopg2
 import kinterbasdb
