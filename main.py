@@ -1,6 +1,12 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+#
+# psycopg2 - для соединения с postgresql
+# kinterbasdb - для соединения с firebird
+# apt-get install python-kinterbasdb
+# apt-get install python-psycopg2
+#
 import FieldProperty
 import TableProperty
 import MoveData
@@ -25,6 +31,7 @@ try:
             F.RDB$FIELD_PRECISION AS "PRECISION", 
             R.RDB$FIELD_NAME AS "NAME",
             R.RDB$DEFAULT_SOURCE AS "DEFAULT_VALUE",
+            F.RDB$CHARACTER_SET_ID AS "CHARACTER_SET_ID",
             R.RDB$NULL_FLAG                    
      from 
               RDB$FIELDS F, 
@@ -60,7 +67,9 @@ try:
          fp.precision = row[5]
          fp.name = row[6].strip()
          fp.defaultValue = row[7]
-         fp.nullFlag = row[8]
+         if row[8] is not None:
+           fp.charset = row[8] 
+         fp.nullFlag = row[9]
          table.fields.append(unicode(fp))
          table.fieldsProp.append(fp)
          count += 1

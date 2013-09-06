@@ -15,4 +15,7 @@ class TableProperty:
                  result += u","
                  result += u"PRIMARY KEY( " + u",".join(self.primaryKey) + ")"
              result += ")"    
+         result = result.replace('boolean DEFAULT 0', 'boolean DEFAULT false')
+         result = result.replace('boolean DEFAULT 1', 'boolean DEFAULT true')
+         #result = result.replace('smallint', 'boolean')
          return result

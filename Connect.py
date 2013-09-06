@@ -1,13 +1,5 @@
 # -*- coding: utf-8 -*-
 
-#
-# psycopg2 - для соединения с postgresql
-# kinterbasdb - для соединения с firebird
-# apt-get install python-kinterbasdb
-# apt-get install python-psycopg2
-#
-
-
 import ConfigParser
 import psycopg2
 import kinterbasdb
@@ -22,6 +14,7 @@ def openPSQL():
   for key, value in config.items('psql'):
     prop[key] = value
   connectionString = 'dbname=%(dbname)s user=%(user)s host=%(host)s password=%(password)s' % prop
+  psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
   conPSQL = psycopg2.connect(connectionString);
   return conPSQL, conPSQL.cursor()
 
