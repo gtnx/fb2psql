@@ -13,16 +13,15 @@ class FieldProperty :
     defaultValue = None
     nullFlag = 0
     uniq = None
-    charset = 0
     
     def getType(self):
-         if self.type == 7 and self.name in ["GROUPVIEWMODE", "TYPEFORMVIEW", "VIEWMODE", "SUBDICTIONARYVIEWMODE", "OBJECTTYPE", "STRINGSUBTYPE", "MULTILINK", "CACHEPOSITION","ORDERDIR"]:
-             return u"smallint"
+         if self.domain[:4] != u"RDB$":
+             return self.domain 
          elif self.type == 7:
-             return u"boolean" 
+             return u"smallint"
          elif self.type == 261 and self.subType == 1:
              return u"text"
-         elif self.type == 261 and self.subType == 0:
+         elif self.type == 261 and (self.subType == 0 or self.subType == 2):
              return u"bytea"
          elif self.type == 14:
              return u"char (" + unicode(self.length) + u")"
@@ -38,13 +37,13 @@ class FieldProperty :
               return u"real"
          elif self.type == 16 and self.subType == 0:
               return u"bigint"
-         elif self.type == 8 and self.name in ["ISGROUPBY"]:
-              return "boolean" 
          elif self.type == 8:
-              return u"integer"
+              if self.name.startswith(u"ID") or self.name.endswith(u"ID"):
+                return u"ID_TYPE"
+              else:
+                return u"integer"
          elif self.type == 16 and self.subType  == 1:
-              #return u" numeric (" + unicode(self.precision) + u"," + unicode(-1*self.scale)  + u")"
-              return u"int8"
+              return u"numeric (" + unicode(self.precision) + u"," + unicode(-1*self.scale)  + u")"
          elif self.type == 13:
               return u"time"
          elif self.type == 35:
@@ -56,6 +55,24 @@ class FieldProperty :
         if self.nullFlag is not None and self.nullFlag == 1:
             notNull = u" NOT NULL "
         defaultValue = u""
-        if self.defaultValue is not None :
+        if self.name == u"ID":
+            #инвалидная коляска из-за невозможности задать длинное имя в FB
+            if self.tableName == u"ADDRESSBOOK_GROUP_CONTACT":
+                defaultValue = u" DEFAULT nextval('GEN_ADDRESSBOOK_GROUP_CT_ID')"
+            elif self.tableName == u"CHECKPOINTS_TPL_CHECKPOINTS":
+                defaultValue = u" DEFAULT nextval('GEN_CHECKPOINTS_TPL_CP_ID')"
+            elif self.tableName == u"DLFOLDER_SETTINGS_CONTACT":
+                defaultValue = u" DEFAULT nextval('GEN_DLFOLDER_SETTINGS_CN_ID')"
+            elif self.tableName == u"ROUTETEMPLATENODE_OPERATION":
+                defaultValue = u" DEFAULT nextval('GEN_ROUTETEMPLNODE_OPERATION_ID')"
+            elif self.tableName == u"VALUATION_EMPLOYER_INTASK":
+                defaultValue = u" DEFAULT nextval('GEN_VALUATION_EMPL_INTASK_ID')"
+            elif self.tableName == u"TASK_TYPE_TEMPLATE_FIELDS":
+                defaultValue = u" DEFAULT nextval('GEN_TASKTYPE_TEMPLATE_FIELDS_ID')"
+            elif self.tableName == u"DOCUMENTTEMPLATEATTACHMENT":
+                defaultValue = u" DEFAULT nextval('GEN_DOCUMENTTEMPATTACHMENT_ID')"
+            else:
+                defaultValue = u" DEFAULT nextval('GEN_" + unicode(self.tableName) + u"_ID')"
+        elif self.defaultValue is not None :
             defaultValue = unicode(self.defaultValue)
         return (" ".join([unicode(self.name), self.getType(), defaultValue, notNull])).strip()

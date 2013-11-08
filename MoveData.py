@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from Connect import *
-#from django.utils.encoding import smart_str, smart_unicode
 import exceptions
 
 class MoveData:
@@ -12,7 +11,7 @@ class MoveData:
     
     def run(self):
         if len(self.table.fieldsProp) > 0:
-            conFB, curFB = openFB()
+            conFB, curFB, dataCharsetFB = openFB()
             conPSQL, curPSQL = openPSQL()
             try:
                  # получам данные
@@ -26,38 +25,28 @@ class MoveData:
                      insert = u"INSERT INTO " + self.table.name +  u" VALUES (%s"
                      count = len(self.table.fieldsProp)
                      rowArray = [row[0]] 
-                     for i in range(1,  count):                       
-                        if self.table.fieldsProp[i].type == 261 and self.table.fieldsProp[i].subType == 0 and row[i] is not None:
-                           rowArray.append(psycopg2.Binary(row[i]))
-                           #print u"error then copy row: " + unicode(row[0]) + u", table: " + self.table.name
-                        elif self.table.fieldsProp[i].charset != 0:
-                           #print unicode(row[i]).encode('ascii', 'ignore')
-                           rowArray.append(row[i])
-                        elif self.table.fieldsProp[i].type == 7 and self.table.fieldsProp[i].name in ["GROUPVIEWMODE", "TYPEFORMVIEW", "VIEWMODE", "SUBDICTIONARYVIEWMODE", "OBJECTTYPE", "STRINGSUBTYPE", "MULTILINK", "CACHEPOSITION", "ORDERDIR"]:
-                           rowArray.append(row[i])
-
-                        elif self.table.fieldsProp[i].type == 7 or (self.table.fieldsProp[i].type == 8 and self.table.fieldsProp[i].name in ["ISGROUPBY"]):
-                           if str(row[i]) == "1":
-                              rowArray.append("true")
-                           elif str(row[i]) == "0":
-                              rowArray.append("false")   
-                           else:
-                              rowArray.append(None)   
+                     for i in range(1,  count): 
+                        if row[i] is not None: 
+                            if self.table.fieldsProp[i].type == 261 and (self.table.fieldsProp[i].subType == 0 or self.table.fieldsProp[i].subType == 2):
+                                rowArray.append(psycopg2.Binary(row[i]))
+                                #print u"error then copy row: " + unicode(row[0]) + u", table: " + self.table.name
+                            elif self.table.fieldsProp[i].type == 261 and self.table.fieldsProp[i].subType == 1 or self.table.fieldsProp[i].type == 14 or self.table.fieldsProp[i].type == 37:
+                                try:
+                                    rowArray.append(row[i].decode(dataCharsetFB, 'ignore'))
+                                except UnicodeEncodeError, UnicodeDecodeError:
+                                    rowArray.append(row[i])
+                            else:
+                                rowArray.append(row[i])
                         else:
-                           #print row[i]
                            rowArray.append(row[i])
                         insert += u", %s"
                         
                      # выполняем запрос
                      insert += u")"
-                     print insert
-                     print rowArray 
                      curPSQL.execute(insert, rowArray)
                 conPSQL.commit()
             except psycopg2.IntegrityError :
                  pass
-            #except:
-            #     print "error"
             finally:
               curFB.close()
               curPSQL.close()

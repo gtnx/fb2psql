@@ -7,16 +7,24 @@
 # apt-get install python-kinterbasdb
 # apt-get install python-psycopg2
 #
+import MoveDomains
 import FieldProperty
 import TableProperty
 import MoveData
 import MoveGenerators
 import MoveTriggers
+import MoveConstraints
 
 from Connect import *
 
+createDatabasePSQL()
 
-conFB, curFB = openFB()
+# переносим имеющиеся домены
+MoveDomains.MoveDomains().run()
+# переносим имеющиеся генераторы
+MoveGenerators.MoveGenerators().run()
+
+conFB, curFB, dataCharsetFB = openFB()
 conPSQL, curPSQL = openPSQL()
 
 try:
@@ -31,14 +39,14 @@ try:
             F.RDB$FIELD_PRECISION AS "PRECISION", 
             R.RDB$FIELD_NAME AS "NAME",
             R.RDB$DEFAULT_SOURCE AS "DEFAULT_VALUE",
-            F.RDB$CHARACTER_SET_ID AS "CHARACTER_SET_ID",
-            R.RDB$NULL_FLAG                    
+            R.RDB$NULL_FLAG,
+            R.RDB$FIELD_SOURCE as "DOMAIN"           
      from 
               RDB$FIELDS F, 
               RDB$RELATION_FIELDS R 
      where 
-                 F.RDB$FIELD_NAME = R.RDB$FIELD_SOURCE 
-                 and R.RDB$SYSTEM_FLAG = 0 
+                 F.RDB$FIELD_NAME = R.RDB$FIELD_SOURCE
+                 and R.RDB$SYSTEM_FLAG = 0 and R.RDB$RELATION_NAME not like 'IBE$%'
      order by 
                  R.RDB$RELATION_NAME, 
                  R.RDB$FIELD_POSITION
@@ -48,7 +56,7 @@ try:
      table = TableProperty.TableProperty()
      print u"all fields count: ", len(rows)
      count = 0
-     for row in rows:              
+     for row in rows:      
          if relationName is not None  and relationName != unicode(row[0].strip()):             
              createTable(table,  relationName,  curFB,  curPSQL)
              conPSQL.commit()             
@@ -60,6 +68,7 @@ try:
              
          relationName = unicode(row[0].strip())
          fp = FieldProperty.FieldProperty()
+         fp.tableName = row[0].strip()
          fp.type = row[1]
          fp.length = row[2]
          fp.scale = row[3]
@@ -67,9 +76,8 @@ try:
          fp.precision = row[5]
          fp.name = row[6].strip()
          fp.defaultValue = row[7]
-         if row[8] is not None:
-           fp.charset = row[8] 
-         fp.nullFlag = row[9]
+         fp.nullFlag = row[8]
+         fp.domain = row[9]
          table.fields.append(unicode(fp))
          table.fieldsProp.append(fp)
          count += 1
@@ -79,12 +87,12 @@ try:
      createTable(table,  relationName,  curFB,  curPSQL)    
      conPSQL.commit()
      MoveData.MoveData(table).run()
-     MoveTriggers.MoveTriggers().run()
+     MoveConstraints.MoveConstraints().run()
+    # MoveTriggers.MoveTriggers().run()
 finally:
   curFB.close()
   curPSQL.close()
   conFB.close()
   conPSQL.close()
-# переносим имеющиеся генераторы
-MoveGenerators.MoveGenerators().run()
+print "Database successfully converted"
 

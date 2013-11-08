@@ -3,31 +3,51 @@
 import ConfigParser
 import psycopg2
 import kinterbasdb
+import sys
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
-
+def createDatabasePSQL():
+  config = ConfigParser.ConfigParser()
+  config.read('E:/fb2pg/config.cfg')
+  
+  dbname = config.get('psql', 'dbname')
+  
+  prop = {}
+  for key, value in config.items('psql'):
+    prop[key] = value
+  connectionString = 'user=%(user)s host=%(host)s port=%(port)s password=%(password)s' % prop
+  conPSQL = psycopg2.connect(connectionString);
+  
+  conPSQL.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+  cur = conPSQL.cursor()  
+  cur.execute('CREATE DATABASE ' + dbname)
+  cur.close()
+  conPSQL.close()
+  
 # return cursor
 def openPSQL():
   config = ConfigParser.ConfigParser()
-  config.read('config.cfg')
+  config.read('E:/fb2pg/config.cfg')
 
   prop = {}
   for key, value in config.items('psql'):
     prop[key] = value
-  connectionString = 'dbname=%(dbname)s user=%(user)s host=%(host)s password=%(password)s' % prop
-  psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
+  connectionString = 'dbname=%(dbname)s user=%(user)s host=%(host)s port=%(port)s password=%(password)s' % prop
   conPSQL = psycopg2.connect(connectionString);
+
   return conPSQL, conPSQL.cursor()
 
 def openFB():
   config = ConfigParser.ConfigParser()
-  config.read('config.cfg')
+  config.read('E:/fb2pg/config.cfg')
 
   conFB = kinterbasdb.connect(dsn=config.get('fb', 'host')+':'+config.get('fb', 'dbname'), \
                 user=config.get('fb','user'), \
                 password=config.get('fb', 'password'), \
                 charset=config.get('fb', 'charset'), \
                 dialect=config.getint('fb', 'dialect'))
-  return conFB, conFB.cursor()
+  dataCharsetFB = config.get('fb', 'datacharset')
+  return conFB, conFB.cursor(), dataCharsetFB
 
 def createTable(table,  relationName,  curFB,  curPSQL):
      table.name = relationName
@@ -61,12 +81,14 @@ def createTable(table,  relationName,  curFB,  curPSQL):
      for index in indexis:
          key = unicode(index[0]).strip()
          value = unicode(index[1]).strip()
+        #for unique see MoveConstraints class
          if unicode(index[2]).strip()== u"UNIQUE":
-             if key in newUniqueIndexis.keys():
-                 newUniqueIndexis[key].append(value)
-             else :
-                 newUniqueIndexis[key] = [value]
-         elif  unicode(index[2]).strip()== u"PRIMARY KEY":
+             continue
+        #     if key in newUniqueIndexis.keys():
+        #         newUniqueIndexis[key].append(value)
+        #     else :
+        #         newUniqueIndexis[key] = [value]
+         elif unicode(index[2]).strip()== u"PRIMARY KEY":
              # PRIMARY KEY - создается в месте с таблицей
              table.primaryKey.append(value)
          else :
@@ -93,3 +115,4 @@ def createTable(table,  relationName,  curFB,  curPSQL):
              curPSQL.execute(unicode(sqlCreateIndex))
      except  psycopg2.ProgrammingError:
          print  u"tableName= " + relationName  + u" is Exists"
+         sys.exit()

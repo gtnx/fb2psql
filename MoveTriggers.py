@@ -6,7 +6,7 @@ import re
 class MoveTriggers:
     
     def run(self):
-        conFB, curFB = openFB()
+        conFB, curFB, dataCharsetFB = openFB()
         conPSQL, curPSQL = openPSQL()
         try:
             # получам спсок генератов
