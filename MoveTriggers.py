@@ -75,7 +75,7 @@ class MoveTriggers:
                 conPSQL.commit()
             
             # запишем в файл, те функции которые не удалось создать
-            filename = "noCreateTriggers.sql"
+            filename = "noCreateTriggers.txt"
             FILE = open(filename,"w")
             try :
                 FILE.writelines(badtriggers)
