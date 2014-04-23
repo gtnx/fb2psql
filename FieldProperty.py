@@ -13,13 +13,14 @@ class FieldProperty :
     defaultValue = None
     nullFlag = 0
     uniq = None
+    charset = 0
     
     def getType(self):
          if self.type == 7:
-             return u"smallint"
+             return u"boolean" 
          elif self.type == 261 and self.subType == 1:
              return u"text"
-         elif self.type == 261 and (self.subType == 0 or self.subType == 2):
+         elif self.type == 261 and self.subType == 0:
              return u"bytea"
          elif self.type == 14:
              return u"char (" + unicode(self.length) + u")"
@@ -38,7 +39,8 @@ class FieldProperty :
          elif self.type == 8:
               return u"integer"
          elif self.type == 16 and self.subType  == 1:
-              return u"numeric (" + unicode(self.precision) + u"," + unicode(-1*self.scale)  + u")"
+              #return u" numeric (" + unicode(self.precision) + u"," + unicode(-1*self.scale)  + u")"
+              return u"int8"
          elif self.type == 13:
               return u"time"
          elif self.type == 35:

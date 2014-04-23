@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from Connect import *
+#from django.utils.encoding import smart_str, smart_unicode
 import exceptions
 
 class MoveData:
@@ -25,25 +26,34 @@ class MoveData:
                      insert = u"INSERT INTO " + self.table.name +  u" VALUES (%s"
                      count = len(self.table.fieldsProp)
                      rowArray = [row[0]] 
-                     for i in range(1,  count): 
-                        if row[i] is not None: 
-                            if self.table.fieldsProp[i].type == 261 and (self.table.fieldsProp[i].subType == 0 or self.table.fieldsProp[i].subType == 2):
-                                rowArray.append(psycopg2.Binary(row[i]))
-                                #print u"error then copy row: " + unicode(row[0]) + u", table: " + self.table.name
-                            elif self.table.fieldsProp[i].type == 261 and self.table.fieldsProp[i].subType == 1: 
-                                rowArray.append(row[i].decode('cp1251', 'ignore'))
-                            else:
-                                rowArray.append(row[i])
+                     for i in range(1,  count):                       
+                        if self.table.fieldsProp[i].type == 261 and self.table.fieldsProp[i].subType == 0 and row[i] is not None:
+                           rowArray.append(psycopg2.Binary(row[i]))
+                        elif self.table.fieldsProp[i].type == 7:
+                           if str(row[i]) == "1":
+                              rowArray.append("true")
+                           elif str(row[i]) == "0":
+                              rowArray.append("false")   
+                           else:
+                              rowArray.append(None)   
                         else:
-                           rowArray.append(row[i])
+                           #print row[i]
+                           if type(row[i]) is unicode:
+                              rowArray.append(row[i].encode("utf-8"))
+                           else:   
+                              rowArray.append(row[i])
                         insert += u", %s"
                         
                      # выполняем запрос
                      insert += u")"
+                     print insert
+                     print rowArray 
                      curPSQL.execute(insert, rowArray)
                 conPSQL.commit()
             except psycopg2.IntegrityError :
                  pass
+            #except:
+            #     print "error"
             finally:
               curFB.close()
               curPSQL.close()

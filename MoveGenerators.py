@@ -22,7 +22,7 @@ class MoveGenerators:
             print "count gen: ",  len(rows)
             for row in rows:
                 # получаем значение генератора
-                curFB.execute("""SELECT GEN_ID( %(renName)s, 0 ) FROM RDB$DATABASE;""" % {"renName":unicode(row[0])})
+                curFB.execute("""SELECT GEN_ID( %(renName)s, 1 ) FROM RDB$DATABASE;""" % {"renName":unicode(row[0])})
                 value = curFB.fetchone()[0]
                 # формируем запрос
                 if value > 0:
