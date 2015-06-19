@@ -37,3 +37,7 @@ Unsupported features
 ## Contribution
 
 Please feel free to contribute
+
+Quick ideas:
+* Handle missing features indicated above
+* Packaging
