@@ -8,11 +8,11 @@ This was orginally a fork from https://code.google.com/p/fb2psql/ but the projec
 
 ## Quick install
 
-   $> virtualenv env
-   $> source env/bin/activate
-   $> pip install -r requirements.txt
-   $> python main.py --help
-   $> python main.py
+    $> virtualenv env
+    $> source env/bin/activate
+    $> pip install -r requirements.txt
+    $> python main.py --help
+    $> python main.py
 
 
 ## Requirements
